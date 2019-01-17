@@ -75,8 +75,45 @@ class Board():
         for i in range(self.height):
             self.state.append("".join(boardLst[i*self.width:i*self.width+self.width]))
                 
+    def splitBoardIntoSections(self):
+        sections = []
+        allTiles = self.getTiles()
+        
+        while len(allTiles) > 0:
+            section = {}
             
-
+            for sTile in self.findSectionTiles(list(allTiles.values())[0]):
+                section[(sTile["x"], sTile["y"])] = allTiles.pop((sTile["x"], sTile["y"]))
+                
+            sections.append(section)
+                
+        return sections
+                
+        
+    def getTiles(self):
+        tiles = {}
+        
+        for x in range(self.height):
+            for y in range(self.width):
+                tiles[(x, y)] = self.createTile(x, y, self.state[x][y])
+        
+        return tiles
+                
+    def findSectionTiles(self, tile):
+        tiles = [tile]
+        sectionTiles = []
+        
+        while len(tiles) > 0:
+            sTile = tiles.pop(0)
+            
+            for tile in self.findAdjecentTilesWithSameColor(sTile["x"], sTile["y"], sTile["color"]):
+                if tile not in sectionTiles:
+                    tiles.append(tile)
+                    sectionTiles.append(tile)
+            
+        return sectionTiles
+            
+    
     def __str__(self):
         bStr = "X: " + str(self.width) + ", Y:" + str(self.height) + "\n"
         
@@ -86,9 +123,16 @@ class Board():
         return bStr
 
 if __name__ == "__main__":
-    b = Board()
+    b = Board(3, 4, ["www", "bbb", "wwb", "wwb"])
     
-    b.generateRandomBoard()
-    
+    #b.generateRandomBoard()
     print(b)
+    
+    #print(b.findSectionTiles(b.createTile(1,2,"b")))
+    
+    
+    for section in b.splitBoardIntoSections():
+        for i in section:
+            print(i)
+        print("---")
     
