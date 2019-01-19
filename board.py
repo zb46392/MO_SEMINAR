@@ -1,31 +1,50 @@
+# -*- coding: utf-8 -*-
+"""
+@author: Zdravko Baničević
+
+Python 3.4
+"""
+
 from random import randint
 
 class Board():
     MIN = 2
     MAX = 20
     
-    def __init__(self, width = None, height = None, state = []):
+    def __init__(self, height = None, width = None, state = None, isSpecialTurn = None):
         self.width = width
         self.height = height
-        self.state = state
-        self.specialTurn = True
+        if state is None:
+            self.state = []
+        else:            
+            self.state = state
+            
+        if isSpecialTurn is None:
+            self.isSpecialTurn = True
+        else:
+            self.isSpecialTurn = isSpecialTurn
         
     def flipTile(self, x, y, color):
-        if self.state[x][y] == "w":
-            splitRow = list(self.state[x])
+        if self.state[x][y] == "w" and color == "w":
+            splitRow = self.rowToLst(self.state[x])
             splitRow[y] = "b"
-            self.state[x] = "".join(splitRow)
-        elif self.state[x][y] == "b":
-            splitRow = list(self.state[x])
+            self.state[x] = self.lstToRow(splitRow)
+        elif self.state[x][y] == "b" and color == "b":
+            splitRow = self.rowToLst(self.state[x])
             splitRow[y] = "w"
-            self.state[x] = "".join(splitRow)
+            self.state[x] = self.lstToRow(splitRow)
             
         for tile in self.findAdjecentTilesWithSameColor(x, y, color):
             self.flipTile(tile["x"], tile["y"], tile["color"])
+    
+    def rowToLst(self, row):
+        return list(row)
+        
+    def lstToRow(self, lst):
+        return "".join(lst)
         
     def findAdjecentTilesWithSameColor(self, x, y, color):
         tiles = []
-        
         if x > 0 and self.state[x-1][y] == color: #                 GORE
             tiles.append(self.createTile(x-1, y, color))
         if x < self.height - 1 and self.state[x+1][y] == color: #   DOLE
@@ -46,12 +65,13 @@ class Board():
             return tile
             
     def returnCopy(self):
-        return Board(self.width, self.height, self.state)
+        return Board(self.height, self.width, [state for state in self.state], self.isSpecialTurn)
         
     def generateRandomBoard(self):
         self.width = randint(Board.MIN, Board.MAX+1)
         self.height = randint(Board.MIN, Board.MAX+1)
         self.state = []
+        self.isSpecialTurn = True
         
         boardLst = []
         
@@ -78,7 +98,6 @@ class Board():
     def splitBoardIntoSections(self):
         sections = []
         allTiles = self.getTiles()
-        
         while len(allTiles) > 0:
             section = {}
             
@@ -101,7 +120,7 @@ class Board():
                 
     def findSectionTiles(self, tile):
         tiles = [tile]
-        sectionTiles = []
+        sectionTiles = [tile]
         
         while len(tiles) > 0:
             sTile = tiles.pop(0)
@@ -113,26 +132,62 @@ class Board():
             
         return sectionTiles
             
-    
+    def fillEmptyCells(self, color):
+        for i in range(len(self.state)):
+            nRow = ""
+            for cell in self.rowToLst(self.state[i]):
+                if cell == "e":
+                    nRow += color
+                else:
+                    nRow += cell
+                    
+            self.state[i] = nRow
+            
+    def makeSpecialTurn(self, color):
+        self.fillEmptyCells(color)
+        self.isSpecialTurn = False
+            
+    def getNextStates(self):
+        nextStates = []
+        
+        if self.isSpecialTurn:
+            tmpBoard = self.returnCopy()
+            tmpBoard.makeSpecialTurn("b")
+            
+            nextStates.append({"board": tmpBoard.returnCopy(), "moves" : "b"})
+            
+            tmpBoard = self.returnCopy()
+            tmpBoard.makeSpecialTurn("w")
+            
+            nextStates.append({"board": tmpBoard.returnCopy(), "moves" : "w"})
+            
+        else:
+            for section in self.splitBoardIntoSections():
+                
+                tmpBoard = self.returnCopy()
+                tmpTile = section[list(section.keys())[0]]
+                
+                tmpBoard.flipTile(tmpTile["x"], tmpTile["y"], tmpTile["color"])
+                
+                nextStates.append({"board": tmpBoard.returnCopy(), "moves" : (tmpTile["x"], tmpTile["y"])})
+                
+        return nextStates
+            
+            
+    def isSolved(self):
+        color = self.state[0][0]
+        
+        for row in self.state:
+            for cell in self.rowToLst(row):
+                if color != cell:
+                    return False
+                    
+        return True
+           
     def __str__(self):
-        bStr = "X: " + str(self.width) + ", Y:" + str(self.height) + "\n"
+        bStr = "N: " + str(self.width) + ", M:" + str(self.height) + "\n"
         
         for row in self.state:
             bStr += str(row) + "\n"
             
         return bStr
-
-if __name__ == "__main__":
-    b = Board(3, 4, ["www", "bbb", "wwb", "wwb"])
-    
-    #b.generateRandomBoard()
-    print(b)
-    
-    #print(b.findSectionTiles(b.createTile(1,2,"b")))
-    
-    
-    for section in b.splitBoardIntoSections():
-        for i in section:
-            print(i)
-        print("---")
-    
